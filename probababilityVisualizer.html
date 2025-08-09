@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Probabilistic Counter Simulation</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        margin: 0;
+        padding: 20px;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .container {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        max-width: 1200px;
+        width: 100%;
+      }
+      h1 {
+        color: #333;
+        text-align: center;
+        margin-bottom: 10px;
+      }
+      .description {
+        text-align: center;
+        color: #666;
+        margin-bottom: 20px;
+        font-size: 14px;
+      }
+      .formula {
+        text-align: center;
+        font-family: "Courier New", monospace;
+        background: #f0f0f0;
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-size: 16px;
+        color: #333;
+      }
+      .controls-section {
+        background: #f8f8f8;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 15px;
+      }
+      .section-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #555;
+        margin-bottom: 10px;
+        text-align: center;
+      }
+      .controls {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+      }
+      .control-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      label {
+        font-size: 12px;
+        color: #555;
+        font-weight: 600;
+      }
+      input[type="number"],
+      select {
+        padding: 8px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: border-color 0.3s;
+        width: 140px;
+      }
+      input[type="number"]:focus,
+      select:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+      button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+        align-self: flex-end;
+      }
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+      }
+      button:active {
+        transform: translateY(0);
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      #canvas {
+        border: 2px solid #ddd;
+        border-radius: 10px;
+        display: block;
+        margin: 0 auto;
+        background: white;
+      }
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+      }
+      .stat-card {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        padding: 15px;
+        border-radius: 10px;
+        text-align: center;
+      }
+      .stat-label {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 5px;
+      }
+      .stat-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #333;
+      }
+      .legend {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        margin-top: 15px;
+        font-size: 12px;
+      }
+      .legend-gradient {
+        width: 200px;
+        height: 20px;
+        border-radius: 5px;
+        background: linear-gradient(
+          90deg,
+          rgb(30, 30, 60) 0%,
+          rgb(50, 50, 150) 25%,
+          rgb(50, 150, 150) 50%,
+          rgb(255, 200, 0) 75%,
+          rgb(255, 50, 50) 100%
+        );
+      }
+      .preset-buttons {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+      }
+      .preset-btn {
+        background: #f0f0f0;
+        color: #333;
+        border: 1px solid #ddd;
+        padding: 8px 15px;
+        border-radius: 6px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .preset-btn:hover {
+        background: #e0e0e0;
+        transform: translateY(-1px);
+      }
+      .no-data-message {
+        text-align: center;
+        padding: 40px;
+        color: #999;
+        font-style: italic;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🎲 Probabilistic Counter Visualization</h1>
+      <div class="description">
+        Explore how initial probability and decay factor affect the counter's
+        journey
+        <br /><small style="color: #999"
+          >Peak Trajectory mode shows only the maximum value reached in each
+          time window. Transparency shows horizontal density.</small
+        >
+      </div>
+
+      <div class="formula" id="formula">
+        P(increment) = <span id="formulaInitial">0.5</span> ×
+        <span id="formulaDecay">0.98</span>^counter
+      </div>
+
+      <div class="preset-buttons">
+        <button
+          class="preset-btn"
+          onclick="setPreset(0.5, 0.95, 'Classic Hard')"
+        >
+          Classic Hard
+        </button>
+        <button class="preset-btn" onclick="setPreset(0.7, 0.98, 'Balanced')">
+          Balanced
+        </button>
+        <button
+          class="preset-btn"
+          onclick="setPreset(0.3, 1.05, 'Slow Start, Accelerating')"
+        >
+          Accelerating
+        </button>
+        <button
+          class="preset-btn"
+          onclick="setPreset(0.9, 0.90, 'Fast Start, Decaying')"
+        >
+          Fast Decay
+        </button>
+        <button
+          class="preset-btn"
+          onclick="setPreset(0.1, 1.15, 'Extreme Acceleration')"
+        >
+          Extreme Accel
+        </button>
+      </div>
+
+      <div class="controls-section">
+        <div class="section-title">Simulation Parameters (requires re-run)</div>
+        <div class="controls">
+          <div class="control-group">
+            <label for="numRuns">Number of Runs</label>
+            <input
+              type="number"
+              id="numRuns"
+              value="100"
+              min="10"
+              max="5000"
+              step="10"
+            />
+          </div>
+          <div class="control-group">
+            <label for="maxValue">Target Value</label>
+            <input
+              type="number"
+              id="maxValue"
+              value="20"
+              min="5"
+              max="100"
+              step="5"
+            />
+          </div>
+          <div class="control-group">
+            <label for="initialProb">Initial Probability</label>
+            <input
+              type="number"
+              id="initialProb"
+              value="0.5"
+              min="0.01"
+              max="1.0"
+              step="0.01"
+            />
+          </div>
+          <div class="control-group">
+            <label for="decayFactor">Decay Factor</label>
+            <input
+              type="number"
+              id="decayFactor"
+              value="0.98"
+              min="0.5"
+              max="1.5"
+              step="0.01"
+            />
+          </div>
+          <button onclick="runSimulation()">Run Simulation</button>
+        </div>
+      </div>
+
+      <div class="controls-section">
+        <div class="section-title">Visualization Settings (instant update)</div>
+        <div class="controls">
+          <div class="control-group">
+            <label for="visualization">Visualization Type</label>
+            <select id="visualization" onchange="redrawVisualization()">
+              <option value="heatmap">Density Heatmap</option>
+              <option value="lines">Individual Lines</option>
+              <option value="both">Both</option>
+              <option value="peak">Peak Trajectory</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label for="colorScaling">Color Scaling</label>
+            <select id="colorScaling" onchange="redrawVisualization()">
+              <option value="linear">Linear</option>
+              <option value="sqrt">Square Root</option>
+              <option value="log">Logarithmic</option>
+              <option value="percentile">Percentile</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <canvas id="canvas" width="1000" height="520"></canvas>
+
+      <div class="legend">
+        <span>Low Density</span>
+        <div class="legend-gradient"></div>
+        <span>High Density</span>
+      </div>
+
+      <div class="stats" id="stats"></div>
+    </div>
+
+    <script>
+      const canvas = document.getElementById("canvas");
+      const ctx = canvas.getContext("2d");
+
+      // Global storage for simulation data
+      let currentRuns = [];
+      let currentStats = null;
+      let currentMaxValue = 20;
+
+      function updateFormula() {
+        const initialProb = parseFloat(
+          document.getElementById("initialProb").value
+        );
+        const decayFactor = parseFloat(
+          document.getElementById("decayFactor").value
+        );
+        document.getElementById("formulaInitial").textContent =
+          initialProb.toFixed(2);
+        document.getElementById("formulaDecay").textContent =
+          decayFactor.toFixed(2);
+      }
+
+      function setPreset(initial, decay, name) {
+        document.getElementById("initialProb").value = initial;
+        document.getElementById("decayFactor").value = decay;
+        updateFormula();
+        runSimulation();
+      }
+
+      function simulateRun(
+        initialProb,
+        decayFactor,
+        maxValue,
+        safetyLimit = 100000
+      ) {
+        const path = [];
+        let counter = 0;
+        let iterations = 0;
+
+        // Keep running until we reach maxValue (guaranteed completion)
+        while (counter < maxValue && iterations < safetyLimit) {
+          path.push(counter);
+
+          // Calculate probability of going up using user-defined initial probability
+          const pUp = initialProb * Math.pow(decayFactor, counter);
+
+          // Cap probability at 0 and 1
+          const cappedPUp = Math.max(0, Math.min(1, pUp));
+
+          // Determine if counter goes up or down
+          if (Math.random() < cappedPUp) {
+            counter++;
+          } else {
+            counter = Math.max(0, counter - 1);
+          }
+
+          iterations++;
+        }
+
+        // Add final state if we reached maxValue
+        if (counter === maxValue) {
+          path.push(maxValue);
+        }
+
+        return path;
+      }
+
+      function createHeatmap(runs, colorScaling, visualizationType, maxValue) {
+        // Find the maximum length among all runs
+        const maxLength = Math.max(...runs.map((run) => run.length));
+
+        // Create density grid with transparency tracking
+        const gridWidth = Math.min(maxLength, 1000); // Cap display width
+        const gridHeight = maxValue + 1; // 0 to maxValue
+
+        // Track both count and horizontal collapse
+        const verticalDensity = Array(gridHeight)
+          .fill(null)
+          .map(() => Array(gridWidth).fill(0));
+        const horizontalDensity = Array(gridHeight)
+          .fill(null)
+          .map(() => Array(gridWidth).fill(0));
+
+        if (visualizationType === "peak") {
+          // Peak trajectory mode - only track maximum value per bin
+          runs.forEach((run) => {
+            const peakValues = Array(gridWidth).fill(-1);
+            const peakCounts = Array(gridWidth).fill(0);
+
+            // Find the peak value in each bin and count occurrences
+            run.forEach((value, index) => {
+              const x = Math.floor((index * gridWidth) / maxLength);
+              if (x < gridWidth) {
+                peakValues[x] = Math.max(peakValues[x], value);
+                peakCounts[x]++;
+              }
+            });
+
+            // Add peak values to density grids
+            peakValues.forEach((peak, x) => {
+              if (peak >= 0) {
+                verticalDensity[peak][x]++;
+                horizontalDensity[peak][x] += peakCounts[x];
+              }
+            });
+          });
+        } else {
+          // Original mode - track all values with horizontal density
+          runs.forEach((run) => {
+            const binCounts = Array(gridHeight)
+              .fill(null)
+              .map(() => Array(gridWidth).fill(0));
+
+            run.forEach((value, index) => {
+              const x = Math.floor((index * gridWidth) / maxLength);
+              if (x < gridWidth) {
+                binCounts[value][x]++;
+              }
+            });
+
+            // Add to density grids
+            for (let y = 0; y < gridHeight; y++) {
+              for (let x = 0; x < gridWidth; x++) {
+                if (binCounts[y][x] > 0) {
+                  verticalDensity[y][x]++;
+                  horizontalDensity[y][x] += binCounts[y][x];
+                }
+              }
+            }
+          });
+        }
+
+        // Apply color scaling to vertical density
+        const flatDensity = verticalDensity.flat().filter((d) => d > 0);
+        let scaledDensity = Array(gridHeight)
+          .fill(null)
+          .map(() => Array(gridWidth).fill(0));
+
+        if (flatDensity.length === 0) {
+          return {
+            colorDensity: scaledDensity,
+            alphaDensity: horizontalDensity,
+            gridWidth,
+            gridHeight,
+          };
+        }
+
+        switch (colorScaling) {
+          case "sqrt":
+            const maxSqrt = Math.sqrt(Math.max(...flatDensity));
+            for (let y = 0; y < gridHeight; y++) {
+              for (let x = 0; x < gridWidth; x++) {
+                scaledDensity[y][x] =
+                  Math.sqrt(verticalDensity[y][x]) / maxSqrt;
+              }
+            }
+            break;
+
+          case "log":
+            const maxLog = Math.log(Math.max(...flatDensity) + 1);
+            for (let y = 0; y < gridHeight; y++) {
+              for (let x = 0; x < gridWidth; x++) {
+                scaledDensity[y][x] =
+                  Math.log(verticalDensity[y][x] + 1) / maxLog;
+              }
+            }
+            break;
+
+          case "percentile":
+            // Create sorted unique values for percentile mapping
+            const uniqueValues = [...new Set(flatDensity)].sort(
+              (a, b) => a - b
+            );
+            const percentileMap = new Map();
+            uniqueValues.forEach((val, idx) => {
+              percentileMap.set(val, idx / (uniqueValues.length - 1));
+            });
+            percentileMap.set(0, 0); // Ensure 0 maps to 0
+
+            for (let y = 0; y < gridHeight; y++) {
+              for (let x = 0; x < gridWidth; x++) {
+                scaledDensity[y][x] =
+                  percentileMap.get(verticalDensity[y][x]) || 0;
+              }
+            }
+            break;
+
+          case "linear":
+          default:
+            const maxLinear = Math.max(...flatDensity);
+            for (let y = 0; y < gridHeight; y++) {
+              for (let x = 0; x < gridWidth; x++) {
+                scaledDensity[y][x] = verticalDensity[y][x] / maxLinear;
+              }
+            }
+            break;
+        }
+
+        // Normalize horizontal density for alpha channel
+        const maxHorizontal = Math.max(...horizontalDensity.flat());
+        const normalizedAlpha = Array(gridHeight)
+          .fill(null)
+          .map(() => Array(gridWidth).fill(0));
+        if (maxHorizontal > 0) {
+          for (let y = 0; y < gridHeight; y++) {
+            for (let x = 0; x < gridWidth; x++) {
+              // Use square root for alpha to prevent too much transparency
+              normalizedAlpha[y][x] = Math.sqrt(
+                horizontalDensity[y][x] / maxHorizontal
+              );
+            }
+          }
+        }
+
+        return {
+          colorDensity: scaledDensity,
+          alphaDensity: normalizedAlpha,
+          gridWidth,
+          gridHeight,
+        };
+      }
+
+      function getHeatmapColor(colorValue, alphaValue) {
+        if (colorValue === 0 && alphaValue === 0)
+          return "rgba(255, 255, 255, 0)";
+
+        // Color based on vertical density
+        let r, g, b;
+        if (colorValue < 0.2) {
+          const t = colorValue * 5;
+          r = 30 + t * 20;
+          g = 30 + t * 20;
+          b = 60 + t * 90;
+        } else if (colorValue < 0.4) {
+          const t = (colorValue - 0.2) * 5;
+          r = 50;
+          g = 50 + t * 100;
+          b = 150;
+        } else if (colorValue < 0.6) {
+          const t = (colorValue - 0.4) * 5;
+          r = 50 + t * 205;
+          g = 150 + t * 50;
+          b = 150 - t * 150;
+        } else if (colorValue < 0.8) {
+          const t = (colorValue - 0.6) * 5;
+          r = 255;
+          g = 200 - t * 50;
+          b = 0;
+        } else {
+          const t = (colorValue - 0.8) * 5;
+          r = 255;
+          g = 150 - t * 100;
+          b = 50 - t * 50;
+        }
+
+        // Alpha based on horizontal density
+        const alpha = Math.min(0.1 + alphaValue * 0.9, 1); // Minimum 10% opacity for visibility
+
+        return `rgba(${Math.round(r)}, ${Math.round(g)}, ${Math.round(
+          b
+        )}, ${alpha})`;
+      }
+
+      function drawVisualization(runs, visualizationType, colorScaling) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (!runs || runs.length === 0) {
+          ctx.font = "16px Arial";
+          ctx.fillStyle = "#999";
+          ctx.textAlign = "center";
+          ctx.fillText(
+            'No simulation data. Click "Run Simulation" to start.',
+            canvas.width / 2,
+            canvas.height / 2
+          );
+          return;
+        }
+
+        const margin = { top: 20, right: 20, bottom: 40, left: 40 };
+        const plotWidth = canvas.width - margin.left - margin.right;
+        const plotHeight = canvas.height - margin.top - margin.bottom;
+
+        if (
+          visualizationType === "heatmap" ||
+          visualizationType === "both" ||
+          visualizationType === "peak"
+        ) {
+          const { colorDensity, alphaDensity, gridWidth, gridHeight } =
+            createHeatmap(
+              runs,
+              colorScaling,
+              visualizationType,
+              currentMaxValue
+            );
+
+          // Calculate cell dimensions
+          const cellWidth = plotWidth / gridWidth;
+          const cellHeight = plotHeight / gridHeight;
+
+          // Draw heatmap with color and transparency
+          for (let y = 0; y < gridHeight; y++) {
+            for (let x = 0; x < gridWidth; x++) {
+              const colorValue = colorDensity[y][x];
+              const alphaValue = alphaDensity[y][x];
+              if (colorValue > 0 || alphaValue > 0) {
+                ctx.fillStyle = getHeatmapColor(colorValue, alphaValue);
+                ctx.fillRect(
+                  margin.left + x * cellWidth,
+                  margin.top + plotHeight - (y + 1) * cellHeight,
+                  cellWidth + 1,
+                  cellHeight + 1
+                );
+              }
+            }
+          }
+        }
+
+        if (visualizationType === "lines" || visualizationType === "both") {
+          const maxLength = Math.max(...runs.map((run) => run.length));
+
+          ctx.globalAlpha = visualizationType === "both" ? 0.02 : 0.05;
+          ctx.strokeStyle = "purple";
+          ctx.lineWidth = 1;
+
+          runs.forEach((run) => {
+            ctx.beginPath();
+            run.forEach((value, index) => {
+              const x = margin.left + (index / maxLength) * plotWidth;
+              const y =
+                margin.top +
+                plotHeight -
+                (value / currentMaxValue) * plotHeight;
+
+              if (index === 0) {
+                ctx.moveTo(x, y);
+              } else {
+                ctx.lineTo(x, y);
+              }
+            });
+            ctx.stroke();
+          });
+
+          ctx.globalAlpha = 1;
+        }
+
+        // Draw axes
+        ctx.strokeStyle = "#333";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(margin.left, margin.top);
+        ctx.lineTo(margin.left, margin.top + plotHeight);
+        ctx.lineTo(margin.left + plotWidth, margin.top + plotHeight);
+        ctx.stroke();
+
+        // Draw grid lines and labels
+        ctx.strokeStyle = "#ddd";
+        ctx.lineWidth = 0.5;
+        ctx.fillStyle = "#666";
+        ctx.font = "10px Arial";
+
+        // Y-axis labels (counter values)
+        const yStep = currentMaxValue <= 20 ? 5 : 10;
+        for (let i = 0; i <= currentMaxValue; i += yStep) {
+          const y =
+            margin.top + plotHeight - (i / currentMaxValue) * plotHeight;
+          ctx.beginPath();
+          ctx.moveTo(margin.left, y);
+          ctx.lineTo(margin.left + plotWidth, y);
+          ctx.stroke();
+          ctx.textAlign = "right";
+          ctx.fillText(i.toString(), margin.left - 5, y + 3);
+        }
+
+        // X-axis labels (iterations)
+        const maxLength = Math.max(...runs.map((run) => run.length));
+        ctx.textAlign = "center";
+        for (let i = 0; i <= 5; i++) {
+          const x = margin.left + (i / 5) * plotWidth;
+          const iterValue = Math.round((i / 5) * maxLength);
+          ctx.fillText(iterValue.toString(), x, margin.top + plotHeight + 15);
+        }
+
+        // Axis titles
+        ctx.font = "12px Arial";
+        ctx.fillStyle = "#333";
+        ctx.save();
+        ctx.translate(15, canvas.height / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.textAlign = "center";
+        ctx.fillText("Counter Value", 0, 0);
+        ctx.restore();
+        ctx.textAlign = "center";
+        ctx.fillText(
+          `Iterations (longest run: ${maxLength})`,
+          canvas.width / 2,
+          canvas.height - 5
+        );
+
+        // Add visualization mode and scaling labels
+        const scalingLabel =
+          {
+            linear: "Linear",
+            sqrt: "Square Root",
+            log: "Logarithmic",
+            percentile: "Percentile",
+          }[colorScaling] || "Linear";
+
+        const modeLabel =
+          {
+            heatmap: "Full Path Density",
+            lines: "Individual Paths",
+            both: "Combined View",
+            peak: "Peak Trajectory",
+          }[visualizationType] || "Full Path";
+
+        ctx.font = "10px Arial";
+        ctx.fillStyle = "#888";
+        ctx.textAlign = "right";
+        ctx.fillText(
+          `Mode: ${modeLabel} | Scaling: ${scalingLabel}`,
+          canvas.width - 25,
+          15
+        );
+      }
+
+      function calculateStats(runs, maxValue) {
+        if (!runs || runs.length === 0) {
+          return {
+            completionRate: "0",
+            avgLength: 0,
+            medianLength: 0,
+            maxLength: 0,
+            minLength: 0,
+            totalRuns: 0,
+          };
+        }
+
+        const completedRuns = runs.filter(
+          (run) => run[run.length - 1] === maxValue
+        );
+        const lengths = runs.map((run) => run.length);
+        const avgLength = lengths.reduce((a, b) => a + b, 0) / lengths.length;
+        const maxLength = Math.max(...lengths);
+        const minLength = Math.min(...lengths);
+
+        // Calculate median length
+        const sortedLengths = [...lengths].sort((a, b) => a - b);
+        const medianLength =
+          sortedLengths[Math.floor(sortedLengths.length / 2)];
+
+        return {
+          completionRate: ((completedRuns.length / runs.length) * 100).toFixed(
+            1
+          ),
+          avgLength: Math.round(avgLength),
+          medianLength: medianLength,
+          maxLength: maxLength,
+          minLength: minLength,
+          totalRuns: runs.length,
+        };
+      }
+
+      function displayStats(stats) {
+        const statsDiv = document.getElementById("stats");
+        statsDiv.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-label">Completion Rate</div>
+                    <div class="stat-value">${stats.completionRate}%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Avg. Iterations</div>
+                    <div class="stat-value">${stats.avgLength}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Median Iterations</div>
+                    <div class="stat-value">${stats.medianLength}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Fastest Run</div>
+                    <div class="stat-value">${stats.minLength}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Slowest Run</div>
+                    <div class="stat-value">${stats.maxLength}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Runs</div>
+                    <div class="stat-value">${stats.totalRuns}</div>
+                </div>
+            `;
+      }
+
+      function redrawVisualization() {
+        const visualizationType =
+          document.getElementById("visualization").value;
+        const colorScaling = document.getElementById("colorScaling").value;
+
+        // Redraw with current data and new settings
+        drawVisualization(currentRuns, visualizationType, colorScaling);
+      }
+
+      function runSimulation() {
+        const numRuns = parseInt(document.getElementById("numRuns").value);
+        const maxValue = parseInt(document.getElementById("maxValue").value);
+        const initialProb = parseFloat(
+          document.getElementById("initialProb").value
+        );
+        const decayFactor = parseFloat(
+          document.getElementById("decayFactor").value
+        );
+        const visualizationType =
+          document.getElementById("visualization").value;
+        const colorScaling = document.getElementById("colorScaling").value;
+
+        // Update global max value
+        currentMaxValue = maxValue;
+
+        // Update formula display
+        updateFormula();
+
+        // Show loading state for large simulations
+        const button = document.querySelector(
+          'button[onclick="runSimulation()"]'
+        );
+        const originalText = button.textContent;
+        button.textContent = "Simulating...";
+        button.disabled = true;
+
+        setTimeout(() => {
+          // Run simulations
+          currentRuns = [];
+          for (let i = 0; i < numRuns; i++) {
+            const run = simulateRun(initialProb, decayFactor, maxValue);
+            // Only include completed runs
+            if (run[run.length - 1] === maxValue) {
+              currentRuns.push(run);
+            }
+          }
+
+          // Calculate and display statistics
+          currentStats = calculateStats(currentRuns, maxValue);
+          displayStats(currentStats);
+
+          // Draw visualization
+          drawVisualization(currentRuns, visualizationType, colorScaling);
+
+          // Restore button
+          button.textContent = originalText;
+          button.disabled = false;
+        }, 10);
+      }
+
+      // Add event listeners for real-time formula updates
+      document
+        .getElementById("initialProb")
+        .addEventListener("input", updateFormula);
+      document
+        .getElementById("decayFactor")
+        .addEventListener("input", updateFormula);
+
+      // Run initial simulation when page loads
+      window.addEventListener("load", () => {
+        runSimulation();
+      });
+    </script>
+  </body>
+</html>
