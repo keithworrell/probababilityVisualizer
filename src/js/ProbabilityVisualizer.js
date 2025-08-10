@@ -75,6 +75,9 @@ export class ProbabilityVisualizer {
 
     // Setup preset buttons
     this.setupPresetButtons();
+    
+    // Setup input field listeners to clear extended UI
+    this.setupInputFieldListeners();
   }
 
   setupPresetButtons() {
@@ -94,6 +97,36 @@ export class ProbabilityVisualizer {
     });
   }
 
+  setupInputFieldListeners() {
+    // List of input field IDs that should clear extended UI when clicked
+    const inputFields = ['numRuns', 'maxValue', 'initialProb', 'decayFactor'];
+    
+    inputFields.forEach(fieldId => {
+      const field = document.getElementById(fieldId);
+      if (field) {
+        // Clear extended UI on focus (when user clicks in the field)
+        field.addEventListener('focus', () => {
+          console.log(`🎛️ Input field "${fieldId}" focused - clearing extended UI`);
+          this.clearExtendedUI();
+        });
+      }
+    });
+  }
+
+  clearExtendedUI() {
+    // Clear extended run UI state
+    this.progressIndicator.hide();
+    this.uiController.setButtonLoadingState(false);
+    this.uiController.setTimeoutPhase('initial');
+    this.previousResults = null; // Clear continuation data
+    
+    // Clear any warning messages
+    const existingWarning = document.getElementById('warning-banner');
+    if (existingWarning) {
+      existingWarning.remove();
+    }
+  }
+
   /**
    * Apply a preset configuration
    */
@@ -104,17 +137,18 @@ export class ProbabilityVisualizer {
       return;
     }
 
-    // Reset timeout phase when changing presets
-    this.uiController.setTimeoutPhase('initial');
-    this.previousResults = null; // Clear continuation data
-    
     console.log(`📝 Applying preset "${preset.name}":`, {
       initialProb: preset.initialProb,
       decayFactor: preset.decayFactor
     });
     
+    // Clear any extended run UI when changing presets
+    this.clearExtendedUI();
+    
     this.uiController.setPreset(preset.initialProb, preset.decayFactor, preset.name);
-    this.runSimulation();
+    
+    // Don't auto-run - let user click "Run Simulation" when ready
+    console.log(`✅ Preset "${preset.name}" applied. Click "Run Simulation" to start.`);
   }
 
   /**

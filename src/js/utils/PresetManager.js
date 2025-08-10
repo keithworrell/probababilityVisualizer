@@ -4,6 +4,12 @@
 export class PresetManager {
   constructor() {
     this.presets = {
+      'classic-easy': {
+        name: 'Classic Easy',
+        initialProb: 0.6,
+        decayFactor: 0.95,
+        description: 'Easier starting probability with traditional decay - good for quick results'
+      },
       'classic-hard': {
         name: 'Classic Hard',
         initialProb: 0.5,
